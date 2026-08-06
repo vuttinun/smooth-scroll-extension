@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Glide Scroll Settings</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:680px;margin:40px auto;padding:0 20px;color:#172033}h1{margin-bottom:24px}.card{padding:22px;border:1px solid #dbe3ef;border-radius:16px;background:#fff;box-shadow:0 8px 30px #1720330c}.field{display:grid;grid-template-columns:180px 1fr 70px;gap:12px;align-items:center;margin:18px 0}input[type=range]{width:100%}textarea{width:100%;min-height:100px;box-sizing:border-box;padding:10px}button{padding:11px 18px;border:0;border-radius:10px;background:#2563eb;color:white;font-weight:700}.note{color:#64748b;font-size:13px}#status{margin-left:10px;color:#15803d}</style>
+</head>
+<body>
+  <h1>ตั้งค่า Glide Scroll</h1>
+  <div class="card">
+    <label class="field"><span>ระยะเลื่อน</span><input id="stepSize" type="range" min="40" max="400" step="10"><output id="stepSizeValue"></output></label>
+    <label class="field"><span>ความนุ่ม</span><input id="smoothness" type="range" min="0.05" max="0.35" step="0.01"><output id="smoothnessValue"></output></label>
+    <label class="field"><span>แรงเร่ง</span><input id="acceleration" type="range" min="0.5" max="2" step="0.05"><output id="accelerationValue"></output></label>
+    <label><input id="keyboard" type="checkbox"> ใช้กับปุ่มลูกศร, Page Up/Down และ Space</label>
+    <p>เว็บไซต์ที่ไม่ให้ทำงาน หนึ่งโดเมนต่อบรรทัด</p>
+    <textarea id="excludedHosts" placeholder="example.com"></textarea>
+    <p class="note">หน้า chrome:// และ Chrome Web Store ไม่อนุญาตให้ Extension ทำงาน</p>
+    <button id="save">บันทึก</button><span id="status"></span>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
