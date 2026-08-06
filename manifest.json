@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Glide Scroll",
+  "version": "1.0.0",
+  "description": "Configurable smooth scrolling for Chrome and Edge.",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Glide Scroll",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
