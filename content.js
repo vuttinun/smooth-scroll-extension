@@ -1,112 +1,115 @@
 (() => {
   const defaults = {
     enabled: true,
+    speed: 120,
     stepSize: 120,
-    smoothness: 0.16,
-    acceleration: 1.15,
-    keyboard: true,
+    smoothness: 16,
+    acceleration: 120,
+    horizontal: true,
+    ignoreTouchpad: true,
+    respectReducedMotion: true,
+    nestedScroll: true,
     excludedHosts: []
   };
 
-  let settings = { ...defaults };
-  let state = new WeakMap();
+  let settings = defaults;
+  let frame = 0;
+  let scrollNode = null;
+  let targetX = 0;
+  let targetY = 0;
+  let lastWheelTime = 0;
+  let repeatedWheels = 0;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-  chrome.storage.sync.get(defaults, (saved) => {
-    settings = { ...defaults, ...saved };
-  });
+  function isDisabled() {
+    const host = location.hostname.toLowerCase();
+    const excluded = settings.excludedHosts.some(item => host === item || host.endsWith('.' + item));
+    return !settings.enabled || excluded || (settings.respectReducedMotion && reducedMotion.matches);
+  }
 
+  function isScrollable(element, horizontal, delta) {
+    if (!element || element === document.body || element === document.documentElement) return false;
+    const style = getComputedStyle(element);
+    if (horizontal) {
+      return /(auto|scroll|overlay)/.test(style.overflowX) && element.scrollWidth > element.clientWidth && (delta < 0 ? element.scrollLeft > 0 : element.scrollLeft + element.clientWidth < element.scrollWidth);
+    }
+    return /(auto|scroll|overlay)/.test(style.overflowY) && element.scrollHeight > element.clientHeight && (delta < 0 ? element.scrollTop > 0 : element.scrollTop + element.clientHeight < element.scrollHeight);
+  }
+
+  function getScroller(start, horizontal, delta) {
+    if (!settings.nestedScroll) return document.scrollingElement;
+    let element = start instanceof Element ? start : document.body;
+    while (element && element !== document.body) {
+      if (isScrollable(element, horizontal, delta)) return element;
+      element = element.parentElement;
+    }
+    return document.scrollingElement;
+  }
+
+  function animate() {
+    if (!scrollNode || isDisabled()) {
+      frame = 0;
+      return;
+    }
+    const factor = Math.max(0.05, Math.min(0.35, settings.smoothness / 100));
+    const nextX = scrollNode.scrollLeft + (targetX - scrollNode.scrollLeft) * factor;
+    const nextY = scrollNode.scrollTop + (targetY - scrollNode.scrollTop) * factor;
+    scrollNode.scrollLeft = nextX;
+    scrollNode.scrollTop = nextY;
+    if (Math.abs(targetX - nextX) < 0.5 && Math.abs(targetY - nextY) < 0.5) {
+      scrollNode.scrollLeft = targetX;
+      scrollNode.scrollTop = targetY;
+      frame = 0;
+      repeatedWheels = 0;
+      return;
+    }
+    frame = requestAnimationFrame(animate);
+  }
+
+  function move(element, dx, dy) {
+    if (scrollNode !== element) {
+      scrollNode = element;
+      targetX = element.scrollLeft;
+      targetY = element.scrollTop;
+    }
+    targetX = Math.max(0, Math.min(element.scrollWidth - element.clientWidth, targetX + dx));
+    targetY = Math.max(0, Math.min(element.scrollHeight - element.clientHeight, targetY + dy));
+    if (!frame) frame = requestAnimationFrame(animate);
+  }
+
+  function looksLikeTouchpad(event) {
+    return event.deltaMode === 0 && ((Math.abs(event.deltaY) > 0 && Math.abs(event.deltaY) < 40) || Math.abs(event.deltaX) > 0);
+  }
+
+  function onWheel(event) {
+    if (isDisabled() || event.ctrlKey || (settings.ignoreTouchpad && looksLikeTouchpad(event))) return;
+    const horizontal = settings.horizontal && (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY));
+    let raw = horizontal ? (event.deltaX || event.deltaY) : event.deltaY;
+    if (!raw) return;
+    if (event.deltaMode === 1) raw *= 16;
+    if (event.deltaMode === 2) raw *= innerHeight;
+
+    const now = performance.now();
+    repeatedWheels = now - lastWheelTime < 180 ? Math.min(repeatedWheels + 1, 6) : 0;
+    lastWheelTime = now;
+    const acceleration = 1 + repeatedWheels * ((settings.acceleration - 100) / 500);
+    const distance = Math.sign(raw) * Math.max(Math.abs(raw), settings.stepSize) * (settings.speed / 100) * acceleration;
+    const element = getScroller(event.target, horizontal, raw);
+    event.preventDefault();
+    move(element, horizontal ? distance : 0, horizontal ? 0 : distance);
+  }
+
+  function apply(values) {
+    settings = Object.assign({}, defaults, values);
+    settings.excludedHosts = Array.isArray(settings.excludedHosts) ? settings.excludedHosts : [];
+  }
+
+  chrome.storage.sync.get(defaults, apply);
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== "sync") return;
-    for (const [key, value] of Object.entries(changes)) settings[key] = value.newValue;
+    if (area !== 'sync') return;
+    const next = Object.assign({}, settings);
+    Object.keys(changes).forEach(key => { next[key] = changes[key].newValue; });
+    apply(next);
   });
-
-  function isExcluded() {
-    return settings.excludedHosts.some((host) => location.hostname === host || location.hostname.endsWith(`.${host}`));
-  }
-
-  function isEditable(target) {
-    return target instanceof Element && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
-  }
-
-  function scrollableAncestor(start, deltaY) {
-    let node = start instanceof Element ? start : document.documentElement;
-    while (node && node !== document.documentElement) {
-      const style = getComputedStyle(node);
-      const canScroll = /(auto|scroll|overlay)/.test(style.overflowY) && node.scrollHeight > node.clientHeight;
-      if (canScroll) {
-        const roomDown = node.scrollTop + node.clientHeight < node.scrollHeight - 1;
-        const roomUp = node.scrollTop > 1;
-        if ((deltaY > 0 && roomDown) || (deltaY < 0 && roomUp)) return node;
-      }
-      node = node.parentElement;
-    }
-    return document.scrollingElement || document.documentElement;
-  }
-
-  function maxScroll(element) {
-    return element === document.scrollingElement || element === document.documentElement
-      ? Math.max(0, document.documentElement.scrollHeight - innerHeight)
-      : Math.max(0, element.scrollHeight - element.clientHeight);
-  }
-
-  function currentTop(element) {
-    return element === document.scrollingElement || element === document.documentElement ? scrollY : element.scrollTop;
-  }
-
-  function setTop(element, value) {
-    if (element === document.scrollingElement || element === document.documentElement) scrollTo(0, value);
-    else element.scrollTop = value;
-  }
-
-  function animate(element) {
-    const item = state.get(element);
-    if (!item) return;
-
-    const distance = item.target - item.current;
-    item.current += distance * Math.min(0.45, Math.max(0.05, Number(settings.smoothness)));
-    setTop(element, item.current);
-
-    if (Math.abs(distance) > 0.6) item.frame = requestAnimationFrame(() => animate(element));
-    else {
-      setTop(element, item.target);
-      item.current = item.target;
-      item.frame = null;
-    }
-  }
-
-  function glide(element, delta) {
-    let item = state.get(element);
-    const actual = currentTop(element);
-    if (!item) item = { current: actual, target: actual, frame: null };
-    if (Math.abs(actual - item.current) > 4) item.current = item.target = actual;
-
-    item.target = Math.max(0, Math.min(maxScroll(element), item.target + delta));
-    state.set(element, item);
-    if (!item.frame) item.frame = requestAnimationFrame(() => animate(element));
-  }
-
-  addEventListener("wheel", (event) => {
-    if (!settings.enabled || isExcluded() || event.ctrlKey || event.metaKey) return;
-    const target = scrollableAncestor(event.target, event.deltaY);
-    const direction = Math.sign(event.deltaY);
-    const magnitude = event.deltaMode === 1 ? Math.abs(event.deltaY) * 16 : Math.abs(event.deltaY);
-    const delta = direction * Math.max(Number(settings.stepSize), magnitude) * Number(settings.acceleration);
-    event.preventDefault();
-    glide(target, delta);
-  }, { passive: false, capture: true });
-
-  addEventListener("keydown", (event) => {
-    if (!settings.enabled || !settings.keyboard || isExcluded() || isEditable(event.target) || event.altKey || event.ctrlKey || event.metaKey) return;
-    const page = Math.max(120, innerHeight * 0.82);
-    const keys = {
-      ArrowDown: Number(settings.stepSize),
-      ArrowUp: -Number(settings.stepSize),
-      PageDown: page,
-      PageUp: -page,
-      " ": event.shiftKey ? -page : page
-    };
-    if (!(event.key in keys)) return;
-    event.preventDefault();
-    glide(scrollableAncestor(event.target, keys[event.key]), keys[event.key]);
-  }, true);
+  addEventListener('wheel', onWheel, { passive: false });
 })();
