@@ -1,22 +1,46 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Glide Scroll Settings</title>
-  <style>body{font-family:system-ui,sans-serif;max-width:680px;margin:40px auto;padding:0 20px;color:#172033}h1{margin-bottom:24px}.card{padding:22px;border:1px solid #dbe3ef;border-radius:16px;background:#fff;box-shadow:0 8px 30px #1720330c}.field{display:grid;grid-template-columns:180px 1fr 70px;gap:12px;align-items:center;margin:18px 0}input[type=range]{width:100%}textarea{width:100%;min-height:100px;box-sizing:border-box;padding:10px}button{padding:11px 18px;border:0;border-radius:10px;background:#2563eb;color:white;font-weight:700}.note{color:#64748b;font-size:13px}#status{margin-left:10px;color:#15803d}</style>
+  <style>
+    :root{color-scheme:light dark;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#64748b;--line:#dbe3ef;--primary:#2563eb;--soft:#eff6ff}
+    @media(prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--line:#334155;--soft:#172554}}
+    *{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}
+    main{max-width:760px;margin:36px auto;padding:0 18px 48px}h1{margin:0 0 6px;font-size:28px}.sub{margin:0 0 24px;color:var(--muted)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:16px;box-shadow:0 10px 35px rgba(15,23,42,.06)}
+    .card h2{font-size:17px;margin:0 0 16px}.preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.preset{border:1px solid var(--line);background:transparent;color:var(--text);padding:12px 8px;border-radius:12px;cursor:pointer}.preset.active{border-color:var(--primary);background:var(--soft);color:var(--primary);font-weight:700}
+    .field{display:grid;grid-template-columns:180px 1fr 72px;gap:12px;align-items:center;margin:18px 0}.field label{font-weight:600}.field small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.field output{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}input[type=range]{width:100%}
+    .switch-row{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.switch-row:last-child{border-bottom:0}.switch-row p{margin:3px 0 0;color:var(--muted);font-size:13px}
+    textarea{width:100%;min-height:110px;padding:12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);resize:vertical}
+    details summary{cursor:pointer;font-weight:700}details[open] summary{margin-bottom:14px}.actions{display:flex;align-items:center;gap:12px;position:sticky;bottom:0;padding:14px 0;background:linear-gradient(transparent,var(--bg) 35%)}
+    button.primary{border:0;border-radius:12px;background:var(--primary);color:white;padding:12px 20px;font-weight:700;cursor:pointer}.status{color:#15803d;font-size:14px}.hint{font-size:13px;color:var(--muted)}
+    @media(max-width:620px){.preset-grid{grid-template-columns:repeat(2,1fr)}.field{grid-template-columns:1fr 60px}.field input{grid-column:1/-1}.field output{grid-column:2;grid-row:1}}
+  </style>
 </head>
 <body>
-  <h1>ตั้งค่า Glide Scroll</h1>
-  <div class="card">
-    <label class="field"><span>ระยะเลื่อน</span><input id="stepSize" type="range" min="40" max="400" step="10"><output id="stepSizeValue"></output></label>
-    <label class="field"><span>ความนุ่ม</span><input id="smoothness" type="range" min="0.05" max="0.35" step="0.01"><output id="smoothnessValue"></output></label>
-    <label class="field"><span>แรงเร่ง</span><input id="acceleration" type="range" min="0.5" max="2" step="0.05"><output id="accelerationValue"></output></label>
-    <label><input id="keyboard" type="checkbox"> ใช้กับปุ่มลูกศร, Page Up/Down และ Space</label>
-    <p>เว็บไซต์ที่ไม่ให้ทำงาน หนึ่งโดเมนต่อบรรทัด</p>
-    <textarea id="excludedHosts" placeholder="example.com"></textarea>
-    <p class="note">หน้า chrome:// และ Chrome Web Store ไม่อนุญาตให้ Extension ทำงาน</p>
-    <button id="save">บันทึก</button><span id="status"></span>
-  </div>
-  <script src="options.js"></script>
-</body>
-</html>
+<main>
+  <h1>Glide Scroll</h1><p class="sub">ปรับการเลื่อนให้เหมาะกับเมาส์และการใช้งานของคุณ</p>
+  <section class="card"><h2>รูปแบบสำเร็จรูป</h2><div class="preset-grid">
+    <button class="preset" data-preset="balanced">สมดุล</button><button class="preset" data-preset="fast">ตอบสนองไว</button><button class="preset" data-preset="smooth">นุ่มมาก</button><button class="preset" data-preset="native">Touchpad</button>
+  </div></section>
+  <section class="card"><h2>การตั้งค่าหลัก</h2>
+    <div class="field"><label for="speed">ความเร็ว<small>ตัวคูณระยะจากล้อเมาส์</small></label><input id="speed" type="range" min="50" max="250" step="5"><output id="speedValue"></output></div>
+    <div class="field"><label for="stepSize">ระยะเลื่อน<small>ระยะขั้นต่ำต่อหนึ่งจังหวะ</small></label><input id="stepSize" type="range" min="40" max="400" step="10"><output id="stepSizeValue"></output></div>
+    <div class="field"><label for="smoothness">ความนุ่ม<small>มากขึ้นจะนุ่มแต่หน่วงขึ้น</small></label><input id="smoothness" type="range" min="5" max="35" step="1"><output id="smoothnessValue"></output></div>
+    <div class="field"><label for="acceleration">แรงเร่ง<small>เพิ่มระยะเมื่อหมุนต่อเนื่อง</small></label><input id="acceleration" type="range" min="100" max="200" step="5"><output id="accelerationValue"></output></div>
+  </section>
+  <section class="card"><h2>การทำงาน</h2>
+    <div class="switch-row"><div><strong>Momentum</strong><p>ให้การเลื่อนค่อย ๆ หยุดแทนการหยุดทันที</p></div><input id="momentum" type="checkbox"></div>
+    <div class="switch-row"><div><strong>ปุ่มคีย์บอร์ด</strong><p>Arrow, Page Up/Down, Space, Home และ End</p></div><input id="keyboard" type="checkbox"></div>
+    <div class="switch-row"><div><strong>เลื่อนแนวนอน</strong><p>รองรับ Shift + Wheel และกล่องแนวนอน</p></div><input id="horizontal" type="checkbox"></div>
+  </section>
+  <section class="card"><details><summary>การตั้งค่าขั้นสูง</summary>
+    <div class="switch-row"><div><strong>ข้าม Precision Touchpad</strong><p>ใช้ smooth scroll เฉพาะอินพุตที่มีลักษณะเป็นล้อเมาส์</p></div><input id="ignoreTouchpad" type="checkbox"></div>
+    <div class="switch-row"><div><strong>เคารพ Reduced Motion</strong><p>ปิดเอฟเฟกต์เมื่อระบบร้องขอให้ลดการเคลื่อนไหว</p></div><input id="respectReducedMotion" type="checkbox"></div>
+    <div class="switch-row"><div><strong>กล่องเลื่อนซ้อน</strong><p>เลื่อนกล่องใต้เมาส์ก่อนเลื่อนทั้งหน้า</p></div><input id="nestedScroll" type="checkbox"></div>
+    <p class="hint">เว็บไซต์ที่ไม่ให้ Extension ทำงาน — หนึ่งโดเมนต่อหนึ่งบรรทัด</p><textarea id="excludedHosts" placeholder="example.com&#10;mail.example.com"></textarea>
+  </details></section>
+  <div class="actions"><button id="save" class="primary">บันทึกการตั้งค่า</button><span id="status" class="status" role="status"></span></div>
+</main><script src="options.js"></script></body></html>
